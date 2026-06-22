@@ -65,11 +65,14 @@ export class PaymentService {
     try {
       console.log(`[Background] iPay ga so'rov yuborilyapti... Karta: ${card.id}`);
 
+      // iPay so'mda ishlaydi, frontend tiyinda yuboradi → 100 ga bo'lamiz
+      const amountInSom = Math.floor(amount / 100);
+
       // iPay dan pul yechish so'rovi
       const ipayRes = await IpayService.chargeCard(
         card.cardId!,
         card.cardToken!,
-        amount,
+        amountInSom,
       );
 
       const is3rdPartySuccess = !ipayRes.error && ipayRes.result;

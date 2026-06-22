@@ -9,8 +9,7 @@ const httpServer = http.createServer(app)
 SocketService.init(httpServer)
 
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server ishga tushdi: http://localhost:${PORT}`)
-  console.log(`🌐 Tarmoqdan: http://10.20.30.30:${PORT}`)
+  console.log(`server connected: http://localhost:${PORT}`)
 })
 
 export default httpServer
