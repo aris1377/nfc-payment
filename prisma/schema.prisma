@@ -1,0 +1,120 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id     Int     @id @default(autoincrement())
+  phone  String  @unique @map("phone")
+  name   String? @map("name")
+  status String  @default("active")
+
+  cards        Card[]
+  transactions Transaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Card {
+  id     Int @id @default(autoincrement())
+  userId Int @default(0) @map("user_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cardId            String? @map("card_id")
+  cardNumberMasked  String? @map("card_number_masked")
+  maskedPhoneNumber String? @map("masked_phone_number")
+  cardToken         String? @map("card_token")
+  expiry            String? @map("expiry")
+
+  bankName String? @map("bank_name")
+  bankLogo String? @map("bank_logo")
+  cardLogo String? @map("card_logo")
+
+  status  String  @default("pending") @map("status") // pending, active, blocked
+  balance String? @map("balance") // Tiyinda saqlanadi
+
+  transactions Transaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("cards")
+}
+
+model Merchant {
+  id             Int    @id @default(autoincrement())
+  uuid           String @unique @default(uuid()) @map("uuid")
+  merchantIdFrom String @unique @map("merchant_id_from")
+  name           String @map("name")
+  apiKey         String @unique @map("api_key")
+  vendorId       Int?   @map("vendor_id")    // 3-tomon vendor ID
+  commission     Float  @default(0) @map("commission") // foizda: 2.5 = 2.5%
+  status         String @default("active")
+
+  terminals Terminal[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("merchants")
+}
+
+model Terminal {
+  id         Int @id @default(autoincrement())
+  merchantId Int @map("merchant_id")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  terminalIdFrom String @unique @map("terminal_id_from") // TZ: TERM_4521
+  serialNumber   String @unique @map("serial_number")
+  status         String @default("active") @map("status") // active, inactive
+
+  socketSessions SocketSession[]
+  transactions   Transaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("terminals")
+}
+
+model SocketSession {
+  id          Int      @id @default(autoincrement())
+  terminalId  Int      @map("terminal_id")
+  terminal    Terminal @relation(fields: [terminalId], references: [id], onDelete: Cascade)
+  socketId    String   @unique @map("socket_id")
+  status      String   @default("active") @map("status") // active, inactive
+  connectedAt DateTime @default(now()) @map("connected_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@map("socket_sessions")
+}
+
+model Transaction {
+  id            Int    @id @default(autoincrement())
+  transactionId String @unique @map("transaction_id")
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id])
+
+  cardId Int  @map("card_id")
+  card   Card @relation(fields: [cardId], references: [id])
+
+  terminalId Int      @map("terminal_id")
+  terminal   Terminal @relation(fields: [terminalId], references: [id])
+
+  amount   Int
+  currency String  @default("UZS")
+  status   String
+  socketId String
+  reason   String?
+
+  createdAt DateTime @default(now())
+
+  @@map("transactions")
+}

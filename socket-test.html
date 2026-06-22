@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>Socket Test — Terminal</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    h2 { color: #569cd6; }
+    button { padding: 8px 16px; margin: 4px; cursor: pointer; border: none; border-radius: 4px; font-size: 14px; }
+    #connectBtn  { background: #4ec94e; color: #000; }
+    #registerBtn { background: #569cd6; color: #000; }
+    #log { background: #252526; padding: 12px; border-radius: 6px; margin-top: 16px; min-height: 200px; white-space: pre-wrap; }
+    .ok   { color: #4ec94e; }
+    .err  { color: #f44747; }
+    .info { color: #dcdcaa; }
+  </style>
+</head>
+<body>
+  <h2>🖥️ Terminal Socket Tester</h2>
+
+  <button id="connectBtn"  onclick="connect()">1. Ulanish</button>
+  <button id="registerBtn" onclick="register()" disabled>2. Register (TERM_4521)</button>
+
+  <div id="log">Kutilmoqda...\n</div>
+
+<script>
+  let socket = null
+
+  function log(msg, type = 'info') {
+    const div = document.getElementById('log')
+    const time = new Date().toLocaleTimeString()
+    div.innerHTML += `<span class="${type}">[${time}] ${msg}</span>\n`
+    div.scrollTop = div.scrollHeight
+  }
+
+  function connect() {
+    socket = io('http://localhost:3000')
+
+    socket.on('connect', () => {
+      log(`✅ Ulandi! Socket ID: ${socket.id}`, 'ok')
+      document.getElementById('registerBtn').disabled = false
+    })
+
+    socket.on('disconnect', () => {
+      log('❌ Aloqa uzildi', 'err')
+      document.getElementById('registerBtn').disabled = true
+    })
+
+    // Terminal register tasdiqlovi
+    socket.on('terminal:registered', (data) => {
+      log(`✅ Register OK! socketId (roomId): ${data.socketId}`, 'ok')
+      log(`ℹ️  Bu socketId ni NFC orqali mobilga uzating`, 'info')
+    })
+
+    // To'lov natijasi
+    socket.on('payment_result', (data) => {
+      if (data.status === 'approved') {
+        log(`💚 TO'LOV QABUL! transactionId: ${data.transactionId}`, 'ok')
+      } else {
+        log(`❤️ TO'LOV RAD ETILDI! Sabab: ${data.reason} (${data.errorCode})`, 'err')
+      }
+    })
+
+    socket.on('connect_error', (err) => {
+      log(`❌ Ulanish xatosi: ${err.message}`, 'err')
+    })
+  }
+
+  function register() {
+    socket.emit('terminal:register', { terminalIdFrom: 'TERM_4521' })
+    log("📤 terminal:register yuborildi { terminalIdFrom: 'TERM_4521' }", 'info')
+  }
+</script>
+</body>
+</html>
