@@ -76,7 +76,6 @@ model Terminal {
   status         String @default("active") @map("status") // active, inactive
 
   socketSessions SocketSession[]
-  transactions   Transaction[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -105,14 +104,11 @@ model Transaction {
   cardId Int  @map("card_id")
   card   Card @relation(fields: [cardId], references: [id])
 
-  terminalId Int      @map("terminal_id")
-  terminal   Terminal @relation(fields: [terminalId], references: [id])
-
-  amount   Int
-  currency String  @default("UZS")
-  status   String
-  socketId String
-  reason   String?
+  amount             Int
+  currency           String  @default("UZS")
+  status             String
+  reason             String?
+  ipayTransactionId  Int?    @map("ipay_transaction_id")
 
   createdAt DateTime @default(now())
 

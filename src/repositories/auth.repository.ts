@@ -20,4 +20,13 @@ export class AuthRepository {
       where: { id },
     })
   }
+
+  // Foydalanuvchi profilini yangilash
+  static async updateUser(id: number, data: { name?: string }) {
+    return prisma.user.update({
+      where: { id },
+      data,
+      select: { id: true, phone: true, name: true, createdAt: true },
+    })
+  }
 }

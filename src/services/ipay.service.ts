@@ -79,10 +79,26 @@ export class IpayService {
 		return response.data
 	}
 
-	// 5. Kartadan pul yechish (pam.pay_by_id)
-	// cardId  — iPay dan kelgan karta ID si (DB dagi card_id)
-	// cardToken — karta tokeni (DB dagi card_token), headerga qo'yiladi
-	// amount  — summa (tiyinda)
+	// 5. Chek tafsilotlarini olish (pam.get_cheque_details)
+	static async getChequeDetails(transactionId: number) {
+		const response = await ipayClient.post('', {
+			id: this.generateRpcId(),
+			method: 'pam.get_cheque_details',
+			params: { transaction_id: transactionId },
+		})
+		return response.data
+	}
+
+	// 6. Chekni olish (pam.get_cheque)
+	static async getCheque(transactionId: number) {
+		const response = await ipayClient.post('', {
+			id: this.generateRpcId(),
+			method: 'pam.get_cheque',
+			params: { transaction_id: transactionId },
+		})
+		return response.data
+	}
+	
 	static async chargeCard(cardId: string, cardToken: string, amount: number) {
 		const vendorId = Number(process.env.IPAY_VENDOR_ID)
 		const account = Number(process.env.IPAY_ACCOUNT)
@@ -100,6 +116,7 @@ export class IpayService {
 			'',
 			requestBody,
 			{
+				timeout: 30000,
 				headers: {
 					'Card-Token': cardToken,
 				},

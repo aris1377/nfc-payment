@@ -11,6 +11,7 @@ export class PaymentRepository {
         select: {
           id: true,
           transactionId: true,
+          ipayTransactionId: true,
           amount: true,
           currency: true,
           status: true,
@@ -20,14 +21,6 @@ export class PaymentRepository {
             select: {
               cardNumberMasked: true,
               maskedPhoneNumber: true,
-            },
-          },
-          terminal: {
-            select: {
-              terminalIdFrom: true,
-              merchant: {
-                select: { name: true },
-              },
             },
           },
         },
@@ -45,25 +38,29 @@ export class PaymentRepository {
     transactionId: string;
     userId: number;
     cardId: number;
-    terminalId: number;
     amount: number;
     currency: string;
     status: string;
-    socketId: string;
     reason?: string;
+    ipayTransactionId?: number;
   }) {
     return prisma.transaction.create({
       data: {
         transactionId: data.transactionId,
         userId: data.userId,
         cardId: data.cardId,
-        terminalId: data.terminalId,
         amount: data.amount,
         currency: data.currency,
         status: data.status,
-        socketId: data.socketId,
-        reason: data.reason
+        reason: data.reason,
+        ipayTransactionId: data.ipayTransactionId,
       },
+    });
+  }
+
+  static async findByTransactionId(transactionId: string) {
+    return prisma.transaction.findUnique({
+      where: { transactionId },
     });
   }
 }

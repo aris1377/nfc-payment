@@ -27,117 +27,112 @@ export class PaymentService {
     }
   }
 
-  static async initiateNfcPayment(userId: number, body: any) {
-    const { cardId, socketId, merchantId, terminalId, amount, currency } = body;
+  static async getChequeDetails(ipayTransactionId: number) {
+    const ipayRes = await IpayService.getChequeDetails(ipayTransactionId)
 
-    // 1. Bazadan kartani va faolligini tekshiramiz
+    if (ipayRes.error || !ipayRes.result) {
+      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek ma\'lumotlari topilmadi')
+    }
+
+    return {
+      success: true,
+      data: ipayRes.result,
+    }
+  }
+
+  static async getCheque(ipayTransactionId: number) {
+    const ipayRes = await IpayService.getCheque(ipayTransactionId)
+
+    if (ipayRes.error || !ipayRes.result) {
+      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek topilmadi')
+    }
+
+    return {
+      success: true,
+      data: ipayRes.result,
+    }
+  }
+
+  static async initiateNfcPayment(userId: number, body: any) {
+    const { cardId, amount, currency } = body;
+
     const card = await prisma.card.findFirst({
       where: { id: Number(cardId), userId, status: 'active' },
     });
 
     if (!card) {
-      throw new AppError(404, 'E003', 'Karta topilmadi yoki faol emas'); 
+      throw new AppError(404, 'E003', 'Karta topilmadi yoki faol emas');
     }
 
-    // 2. Mobile ilovaga beriladigan zudlik bilan qaytariladigan chek/javob ma'lumoti
-    const mockTransactionId = `TXN_${Date.now()}`;
-    const mobileResponse = {
-      status: 'success', 
-      transactionId: mockTransactionId, 
-      amount: amount,
-      currency: currency, 
-      maskedCard: card.cardNumberMasked, 
-      timestamp: new Date().toISOString(),
-    };
+    const transactionId = `TXN_${Date.now()}`;
+    const amountInSom = Math.floor(amount / 100);
 
-    // 3. ⚠️ ORQA FONDA (Background) ishlaydigan protsessni boshlaymiz (await'siz chaqiramiz)
-    // Bu orqali mobile kutib o'tirmaydi, srazi HTTP response oladi.
-    this.processBackgroundPayment(userId, card, body, mockTransactionId);
-
-    // Mobilega darhol javob qaytariladi
-    return mobileResponse;
-  }
-
-  // Orqa fonda 3-tomon bilan aloqa qiluvchi maxfiy metod
-  private static async processBackgroundPayment(userId: number, card: any, body: any, transactionId: string) {
-    const { socketId, terminalId, amount, currency } = body;
-
+    let ipayRes: any;
     try {
-      console.log(`[Background] iPay ga so'rov yuborilyapti... Karta: ${card.id}`);
+      ipayRes = await IpayService.chargeCard(card.cardId!, card.cardToken!, amountInSom);
+    } catch (err: any) {
+      if (err.code === 'ECONNABORTED') {
+        throw new AppError(504, 'E011', 'To\'lov tizimi javob bermadi, qayta urinib ko\'ring');
+      }
+      throw new AppError(502, 'E010', 'To\'lov tizimiga ulanishda xatolik');
+    }
 
-      // iPay so'mda ishlaydi, frontend tiyinda yuboradi → 100 ga bo'lamiz
-      const amountInSom = Math.floor(amount / 100);
+    const isSuccess = !ipayRes.error && ipayRes.result;
+    const ipayTransactionId = parseInt(ipayRes.result?.details?.transaction_id) || undefined;
 
-      // iPay dan pul yechish so'rovi
-      const ipayRes = await IpayService.chargeCard(
-        card.cardId!,
-        card.cardToken!,
-        amountInSom,
-      );
+    if (isSuccess) {
+      await PaymentRepository.createTransaction({
+        transactionId,
+        userId,
+        cardId: card.id,
+        amount,
+        currency,
+        status: 'approved',
+        ipayTransactionId,
+      });
 
-      const is3rdPartySuccess = !ipayRes.error && ipayRes.result;
-
-      if (is3rdPartySuccess) {
-        // A. Bazaga muvaffaqiyatli tranzaksiyani yozamiz [cite: 146]
-        await PaymentRepository.createTransaction({
-          transactionId,
-          userId,
-          cardId: card.id,
-          terminalId: parseInt(terminalId) || 1,
-          amount,
-          currency,
-          status: 'approved', 
-          socketId,
-        });
-
-        // B. iPay dan yangilangan balansni olib DB ga yozamiz
-        const cardInfoRes = await IpayService.getCardsInfo([card.cardId!]);
-        if (!cardInfoRes.error && cardInfoRes.result?.length > 0) {
-          const updatedBalance = cardInfoRes.result[0].balance?.toString();
-          if (updatedBalance) {
-            await CardRepository.updateBalance(card.id, updatedBalance);
-          }
+      const cardInfoRes = await IpayService.getCardsInfo([card.cardId!]);
+      if (!cardInfoRes.error && cardInfoRes.result?.length > 0) {
+        const updatedBalance = cardInfoRes.result[0].balance?.toString();
+        if (updatedBalance) {
+          await CardRepository.updateBalance(card.id, updatedBalance);
         }
-
-        // C. Terminalga soket orqali APPROVED xabarini otamiz
-        SocketService.emitToRoom(socketId, 'payment_result', {
-          status: 'approved',
-          transactionId: transactionId,
-          amount: amount,
-          maskedCard: card.cardNumberMasked?.slice(-4) ?? null,
-        });
-
-        console.log(`[Background] To'lov muvaffaqiyatli yakunlandi va terminalga soket yuborildi.`);
-      } else {
-        // Agar 3-tomon rad etsa (masalan balans yetmasa)
-        await PaymentRepository.createTransaction({
-          transactionId,
-          userId,
-          cardId: card.id,
-          terminalId: parseInt(terminalId) || 1,
-          amount,
-          currency,
-          status: 'declined', 
-          socketId,
-          reason: 'insufficient_funds' 
-        });
-
-        SocketService.emitToRoom(socketId, 'payment_result', {
-          status: 'declined',
-          reason: ipayRes.error?.message || 'insufficient_funds',
-          errorCode: 'E001',
-        });
       }
 
-    } catch (error: any) {
-      console.error("[Background Error] To'lovda xatolik:", error.message);
-      
-      // Tizimda kutilmagan xato bo'lsa ham terminal osilib qolmasligi uchun xabar yuboramiz
-      SocketService.emitToRoom(socketId, 'payment_result', {
-        status: 'declined', 
-        reason: 'system_error',
-        errorCode: 'E010' 
+      // SocketService.emitToRoom(socketId, 'payment_result', {
+      //   status: 'approved',
+      //   transactionId,
+      //   ipayTransactionId,
+      //   amount,
+      //   maskedCard: card.cardNumberMasked?.slice(-4) ?? null,
+      // });
+
+      return {
+        status: 'success',
+        ipayTransactionId,
+        amount,
+        currency,
+        maskedCard: card.cardNumberMasked,
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      await PaymentRepository.createTransaction({
+        transactionId,
+        userId,
+        cardId: card.id,
+        amount,
+        currency,
+        status: 'declined',
+        reason: 'insufficient_funds',
       });
+
+      // SocketService.emitToRoom(socketId, 'payment_result', {
+      //   status: 'declined',
+      //   reason: ipayRes.error?.message || 'insufficient_funds',
+      //   errorCode: 'E001',
+      // });
+
+      throw new AppError(400, 'E001', ipayRes.error?.message || 'Balans yetarli emas');
     }
   }
 }
