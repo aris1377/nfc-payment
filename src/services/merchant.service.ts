@@ -18,7 +18,6 @@ export class MerchantService {
       throw new AppError(400, 'E001', 'Komissiya 0 dan 100 gacha bo\'lishi kerak')
     }
 
-    // Noyob API key generatsiya
     const apiKey = crypto.randomBytes(32).toString('hex')
 
     const merchant = await MerchantRepository.create({
@@ -33,9 +32,10 @@ export class MerchantService {
 
   static async getMerchants(query: any) {
     const page = parseInt(query.page as string, 10) || 1
-		const limit = parseInt(query.limit as string, 10) || 20
-    const {merchants, totalCount} = await MerchantRepository.findAll(page, limit,)
+    const limit = parseInt(query.limit as string, 10) || 20
+    const { merchants, totalCount } = await MerchantRepository.findAll(page, limit)
     const totalPages = Math.ceil(totalCount / limit)
+
     return {
       data: merchants,
       meta: {

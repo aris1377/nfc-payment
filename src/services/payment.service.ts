@@ -1,57 +1,11 @@
 import { prisma } from '../config/prisma';
 import { PaymentRepository } from '../repositories/payment.repository';
 import { CardRepository } from '../repositories/card.repository';
-import { SocketService } from './socket.service';
 import { IpayService } from './ipay.service';
 import { AppError } from '../utils/app-error';
+import redisClient from '../config/redis';
 
 export class PaymentService {
-  static async getHistory(userId: number, query: any) {
-    const page = parseInt(query.page as string, 10) || 1
-    const limit = parseInt(query.limit as string, 10) || 20
-
-    const { transactions, totalCount } = await PaymentRepository.findHistory(userId, page, limit)
-    const totalPages = Math.ceil(totalCount / limit)
-
-    return {
-      data: transactions,
-      meta: {
-        totalItems: totalCount,
-        itemCount: transactions.length,
-        itemsPerPage: limit,
-        totalPages,
-        currentPage: page,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
-      },
-    }
-  }
-
-  static async getChequeDetails(ipayTransactionId: number) {
-    const ipayRes = await IpayService.getChequeDetails(ipayTransactionId)
-
-    if (ipayRes.error || !ipayRes.result) {
-      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek ma\'lumotlari topilmadi')
-    }
-
-    return {
-      success: true,
-      data: ipayRes.result,
-    }
-  }
-
-  static async getCheque(ipayTransactionId: number) {
-    const ipayRes = await IpayService.getCheque(ipayTransactionId)
-
-    if (ipayRes.error || !ipayRes.result) {
-      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek topilmadi')
-    }
-
-    return {
-      success: true,
-      data: ipayRes.result,
-    }
-  }
 
   static async initiateNfcPayment(userId: number, body: any) {
     const { cardId, amount, currency } = body;
@@ -96,16 +50,9 @@ export class PaymentService {
         const updatedBalance = cardInfoRes.result[0].balance?.toString();
         if (updatedBalance) {
           await CardRepository.updateBalance(card.id, updatedBalance);
+          await redisClient.del(`card:${card.id}:user:${userId}`);
         }
       }
-
-      // SocketService.emitToRoom(socketId, 'payment_result', {
-      //   status: 'approved',
-      //   transactionId,
-      //   ipayTransactionId,
-      //   amount,
-      //   maskedCard: card.cardNumberMasked?.slice(-4) ?? null,
-      // });
 
       return {
         status: 'success',
@@ -126,13 +73,54 @@ export class PaymentService {
         reason: 'insufficient_funds',
       });
 
-      // SocketService.emitToRoom(socketId, 'payment_result', {
-      //   status: 'declined',
-      //   reason: ipayRes.error?.message || 'insufficient_funds',
-      //   errorCode: 'E001',
-      // });
-
       throw new AppError(400, 'E001', ipayRes.error?.message || 'Balans yetarli emas');
+    }
+  }
+
+  static async getHistory(userId: number, query: any) {
+    const page = parseInt(query.page as string, 10) || 1
+    const limit = parseInt(query.limit as string, 10) || 20
+
+    const { transactions, totalCount } = await PaymentRepository.findHistory(userId, page, limit)
+    const totalPages = Math.ceil(totalCount / limit)
+
+    return {
+      data: transactions,
+      meta: {
+        totalItems: totalCount,
+        itemCount: transactions.length,
+        itemsPerPage: limit,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    }
+  }
+
+  static async getChequeDetails(ipayTransactionId: number) {
+    const ipayRes = await IpayService.getChequeDetails(ipayTransactionId)
+
+    if (ipayRes.error || !ipayRes.result) {
+      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek ma\'lumotlari topilmadi')
+    }
+
+    return {
+      success: true,
+      data: ipayRes.result,
+    }
+  }
+
+  static async getCheque(ipayTransactionId: number) {
+    const ipayRes = await IpayService.getCheque(ipayTransactionId)
+
+    if (ipayRes.error || !ipayRes.result) {
+      throw new AppError(404, 'E003', ipayRes.error?.message || 'Chek topilmadi')
+    }
+
+    return {
+      success: true,
+      data: ipayRes.result,
     }
   }
 }

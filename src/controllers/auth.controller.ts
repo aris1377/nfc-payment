@@ -3,7 +3,6 @@ import { AuthService } from '../services/auth.service'
 import { AuthenticatedRequest } from '../middlewares/auth.middleware'
 
 export class AuthController {
-  // POST /api/auth/login
   static async login(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { phone } = req.body
@@ -14,7 +13,6 @@ export class AuthController {
     }
   }
 
-  // POST /api/auth/confirm
   static async confirm(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { userId, otp } = req.body
@@ -25,7 +23,6 @@ export class AuthController {
     }
   }
 
-  // POST /api/auth/refresh
   static async refresh(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const { refreshToken } = req.body
@@ -36,7 +33,6 @@ export class AuthController {
     }
   }
 
-  // GET /api/auth/me
   static async getMe(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.userId!
@@ -47,7 +43,6 @@ export class AuthController {
     }
   }
 
-  // PATCH /api/auth/me
   static async updateMe(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.userId!
