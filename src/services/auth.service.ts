@@ -15,7 +15,7 @@ export class AuthService {
     return {
       success: true,
       userId: user.id,
-      mockOtp: '1234',
+      mockOtp: '123456',
       message: 'OTP kod yuborildi',
     }
   }
@@ -25,7 +25,7 @@ export class AuthService {
       throw new AppError(400, 'E002', 'Foydalanuvchi ID yoki OTP kodi yetarli emas')
     }
 
-    if (otp !== '1234') {
+    if (otp !== '123456') {
       throw new AppError(400, 'E003', "Tasdiqlash kodi noto'g'ri")
     }
 
