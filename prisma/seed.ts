@@ -18,16 +18,17 @@ async function seed() {
 
 	// Merchant
 	const merchant = await prisma.merchant.upsert({
-		where: { merchantIdFrom: 'MERCH_001' },
+		where: { login: 'testmerchant' },
 		update: {},
 		create: {
-			merchantIdFrom: 'MERCH_001',
 			name: 'Test Do\'kon',
+			login: 'testmerchant',
+			password: '$2b$10$placeholder.hashed.password',
 			apiKey: 'test-api-key-001',
 			status: 'active',
 		},
 	})
-	console.log('✅ Merchant yaratildi:', merchant.id, merchant.merchantIdFrom)
+	console.log('✅ Merchant yaratildi:', merchant.id, merchant.name)
 
 	// Terminal
 	const terminal = await prisma.terminal.upsert({

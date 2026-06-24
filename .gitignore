@@ -3,3 +3,7 @@ dist
 .env
 *.log
 /src/generated/prisma
+
+# Claude Code
+.claude/settings.local.json
+CLAUDE.md

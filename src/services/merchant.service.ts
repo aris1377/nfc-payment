@@ -1,17 +1,29 @@
 import crypto from 'crypto'
+import bcrypt from 'bcryptjs'
 import { MerchantRepository } from '../repositories/merchant.repository'
 import { AppError } from '../utils/app-error'
+import redisClient from '../config/redis'
 
 export class MerchantService {
   static async createMerchant(body: {
     name: string
+    login: string
+    password: string
     vendorId?: number
     commission?: number
   }) {
-    const { name, vendorId, commission = 0 } = body
+    const { name, login, password, vendorId, commission = 0 } = body
 
     if (!name) {
       throw new AppError(400, 'E001', 'Merchant nomi kiritilishi shart')
+    }
+
+    if (!login) {
+      throw new AppError(400, 'E001', 'Login kiritilishi shart')
+    }
+
+    if (!password || password.length < 6) {
+      throw new AppError(400, 'E001', 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak')
     }
 
     if (commission < 0 || commission > 100) {
@@ -19,9 +31,12 @@ export class MerchantService {
     }
 
     const apiKey = crypto.randomBytes(32).toString('hex')
+    const hashedPassword = await bcrypt.hash(password, 10)
 
     const merchant = await MerchantRepository.create({
       name,
+      login,
+      password: hashedPassword,
       vendorId,
       commission,
       apiKey,
@@ -73,7 +88,9 @@ export class MerchantService {
       throw new AppError(400, 'E001', 'Komissiya 0 dan 100 gacha bo\'lishi kerak')
     }
 
-    return MerchantRepository.update(uuid, body)
+    const updated = await MerchantRepository.update(uuid, body)
+    await redisClient.del(`merchant:profile:${uuid}`)
+    return updated
   }
 
   static async createTerminal(uuid: string, body: { serialNumber: string }) {

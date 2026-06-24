@@ -16,6 +16,10 @@ export class CardService {
 		}
 		const { phoneNumber, cardNumber, cardExpire } = body
 
+		if (phoneNumber !== userExists.phone) {
+			throw new AppError(400, 'E001', 'Telefon raqam hisobingizdagi raqam bilan mos emas')
+		}
+
 		const ipayRes = await IpayService.registerCard(phoneNumber, cardNumber, cardExpire)
 
 		if (ipayRes.error || !ipayRes.result) {

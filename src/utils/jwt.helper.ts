@@ -6,7 +6,7 @@ const JWT_SECRET: string = process.env.JWT_SECRET || "secret-access-key";
 const blockedTokens = new Set<string>();
 
 interface TokenPayload {
-  userId: number;
+  userId?: number;
   email?: string;
   [key: string]: any;
 }

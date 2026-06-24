@@ -3,14 +3,17 @@ import { prisma } from '../config/prisma'
 export class MerchantRepository {
 	static async create(data: {
 		name: string
+		login: string
+		password: string
 		vendorId?: number
 		commission: number
 		apiKey: string
 	}) {
 		return prisma.merchant.create({
 			data: {
-				merchantIdFrom: `MERCH_${Date.now()}`,
 				name: data.name,
+				login: data.login,
+				password: data.password,
 				vendorId: data.vendorId,
 				commission: data.commission,
 				apiKey: data.apiKey,
@@ -19,12 +22,52 @@ export class MerchantRepository {
 			select: {
 				id: true,
 				uuid: true,
-				merchantIdFrom: true,
+
 				name: true,
+				login: true,
 				vendorId: true,
 				commission: true,
 				status: true,
 				createdAt: true,
+			},
+		})
+	}
+
+	static async findByLogin(login: string) {
+		return prisma.merchant.findUnique({
+			where: { login },
+			select: {
+				id: true,
+				uuid: true,
+				login: true,
+				password: true,
+				name: true,
+				status: true,
+			},
+		})
+	}
+
+	static async findById(id: number) {
+		return prisma.merchant.findUnique({
+			where: { id },
+			select: {
+				id: true,
+				uuid: true,
+
+				name: true,
+				login: true,
+				vendorId: true,
+				commission: true,
+				status: true,
+				createdAt: true,
+				terminals: {
+					select: {
+						id: true,
+						terminalIdFrom: true,
+						serialNumber: true,
+						status: true,
+					},
+				},
 			},
 		})
 	}
@@ -37,7 +80,7 @@ export class MerchantRepository {
 				select: {
 					id: true,
 					uuid: true,
-					merchantIdFrom: true,
+	
 					name: true,
 					vendorId: true,
 					commission: true,
@@ -68,7 +111,7 @@ export class MerchantRepository {
 			select: {
 				id: true,
 				uuid: true,
-				merchantIdFrom: true,
+
 				name: true,
 				vendorId: true,
 				commission: true,
@@ -101,7 +144,7 @@ export class MerchantRepository {
 			select: {
 				id: true,
 				uuid: true,
-				merchantIdFrom: true,
+
 				name: true,
 				vendorId: true,
 				commission: true,

@@ -51,14 +51,16 @@ model Card {
 model Merchant {
   id             Int    @id @default(autoincrement())
   uuid           String @unique @default(uuid()) @map("uuid")
-  merchantIdFrom String @unique @map("merchant_id_from")
   name           String @map("name")
+  login          String @unique @map("login")
+  password       String @map("password")
   apiKey         String @unique @map("api_key")
   vendorId       Int?   @map("vendor_id")    // 3-tomon vendor ID
   commission     Float  @default(0) @map("commission") // foizda: 2.5 = 2.5%
   status         String @default("active")
 
-  terminals Terminal[]
+  terminals    Terminal[]
+  transactions Transaction[]
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -103,6 +105,9 @@ model Transaction {
 
   cardId Int  @map("card_id")
   card   Card @relation(fields: [cardId], references: [id])
+
+  merchantId Int?      @map("merchant_id")
+  merchant   Merchant? @relation(fields: [merchantId], references: [id])
 
   amount             Int
   currency           String  @default("UZS")
