@@ -14,7 +14,6 @@ export class SocketService {
 		})
 
 		this.io.on('connection', (socket: Socket) => {
-			console.log(`Terminal ulandi. Socket ID: ${socket.id}`)
 
 			// 1. Terminal ro'yxatdan o'tishi (terminal:register)
 			socket.on('terminal:register', async (raw: any) => {
@@ -84,7 +83,6 @@ export class SocketService {
 
 			// 3. Aloqa uzilganda (Disconnect)
 			socket.on('disconnect', async () => {
-				console.log(`Terminal uzildi: ${socket.id}`)
 				await prisma.socketSession.updateMany({
 					where: { socketId: socket.id },
 					data: { status: 'inactive' },
