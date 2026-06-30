@@ -16,7 +16,8 @@ export class CardService {
 		}
 		const { phoneNumber, cardNumber, cardExpire } = body
 
-		if (phoneNumber !== userExists.phone) {
+		const normalizedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`
+		if (normalizedPhone !== userExists.phone) {
 			throw new AppError(400, 'E001', 'Telefon raqam hisobingizdagi raqam bilan mos emas')
 		}
 

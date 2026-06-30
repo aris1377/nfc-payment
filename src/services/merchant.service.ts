@@ -85,10 +85,16 @@ export class MerchantService {
 	}
 
 	static async getRevByUuid(uuid: string) {
+		const cacheKey = `merchant:revenue:daily:${uuid}`
+		const cached = await redisClient.get(cacheKey)
+		if (cached) return JSON.parse(cached)
+
 		const merchant = await MerchantRepository.findRevByUuid(uuid)
 		if (!merchant) {
 			throw new AppError(404, 'E003', 'Merchant topilmadi')
 		}
+
+		await redisClient.set(cacheKey, JSON.stringify(merchant), { EX: 86400 })
 		return merchant
 	}
 

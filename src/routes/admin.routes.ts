@@ -19,11 +19,6 @@ router.post(
 )
 router.get('/merchants', MerchantController.list)
 router.get('/merchants/daily-revenue', MerchantController.getDailyRevenue)
-// router.get(
-// 	'/merchants/daily-revenue/:uuid',
-// 	MerchantController.getDailyRevByUuid,
-// )
-
 router.get('/merchants/:uuid', MerchantController.get)
 router.patch(
 	'/merchants/:uuid',

@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express'
 
 export const validateBody = (DtoClass: new () => object) =>
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const instance = plainToInstance(DtoClass, req.body)
+    const instance = plainToInstance(DtoClass, req.body ?? {})
     const errors = await validate(instance, { whitelist: true })
 
     if (errors.length > 0) {

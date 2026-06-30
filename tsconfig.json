@@ -10,7 +10,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
     
-    /* MANA SHU IKKI QATORNI QO'SHASIZ */
     "typeRoots": [
       "./node_modules/@types",
       "./src/@types"
